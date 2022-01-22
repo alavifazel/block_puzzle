@@ -6,11 +6,9 @@
 #include <ctime>
 #include <chrono>
 #include <thread>
-#include <Windows.h>
-#include <stack>
-#include <functional>
-#include <map>
-#include <conio.h>
+#include <termios.h>
+#include <stdio.h>
+#include <cstdlib>
 
 using std::cout;
 using std::cin;
@@ -29,42 +27,44 @@ struct Block {
     int x, y;
 };
 
+using v2d_char = vector<vector<char>>;
+
 // Prototypes
 void loop();
 int selectDifficultyScreen();
 void customDifficultyScreen(bool error);
 int startingScreen();
 void gameScreen();
-void renderGameScreen(vector<vector<char>> board, Block block);
-void moveBlockUp(vector<vector<char>>& board, Block& block);
-void moveBlockDown(vector<vector<char>>& board, Block& block);
-void moveBlockLeft(vector<vector<char>>& board, Block& block);
-void moveBlockRight(vector<vector<char>>& board, Block& block);
-void setBlockOnBoard(vector<vector<char>>& board, Block block);
-void checkScoreCondition(vector<vector<char>>& board);
-void applyOverlap(vector<vector<char>>& board, Block block);
-void addBlock(vector<vector<char>>& board, Block block);
-Block newBlock(vector<vector<char>> board);
-bool blockFits(vector<vector<char>> board, Block block);
-vector<vector<char>> pickBlock(int simpleBlockProb, int intermBlockProb, int complexBlockProb);
-vector<vector<char>> initBoard(int width, int height);
-void printMainFrame(vector<vector<char>> body, int highestScore, int score);
-void printHeaderText(vector<vector<char>> nextBlockVector);
-void addText(vector<vector<char>>& input, char c, int x, int y);
-void addText(vector<vector<char>>& input, string text, int x, int y);
-void print(vector<vector<char>> text);
-void printShape(vector<vector<vector<char>>> shape);
-void updateBoard(vector<vector<char>>& board, Block block);
-void removeBlock(vector<vector<char>>& board, Block block);
+void renderGameScreen(v2d_char board, Block block);
+void moveBlockUp(v2d_char& board, Block& block);
+void moveBlockDown(v2d_char& board, Block& block);
+void moveBlockLeft(v2d_char& board, Block& block);
+void moveBlockRight(v2d_char& board, Block& block);
+void setBlockOnBoard(v2d_char& board, Block block);
+void checkScoreCondition(v2d_char& board);
+void applyOverlap(v2d_char& board, Block block);
+void addBlock(v2d_char& board, Block block);
+Block newBlock(v2d_char board);
+bool blockFits(v2d_char board, Block block);
+v2d_char pickBlock(int simpleBlockProb, int intermBlockProb, int complexBlockProb);
+v2d_char initBoard(int width, int height);
+void printMainFrame(v2d_char body, int highestScore, int score);
+void printHeaderText(v2d_char nextBlockVector);
+void addText(v2d_char& input, char c, int x, int y);
+void addText(v2d_char& input, string text, int x, int y);
+void print(v2d_char text);
+void printShape(vector<v2d_char> shape);
+void updateBoard(v2d_char& board, Block block);
+void removeBlock(v2d_char& board, Block block);
 
-const vector<vector<vector<char>>> simpleShapes{
+const vector<v2d_char> simpleShapes{
   {{'#'}},
   {{'#'}, {'#'}},
   {{'#'}, {'#'}},
   {{'#', '#'}, {'#', '#'}}
 };
 
-const vector<vector<vector<char>>> intermediateShapes{
+const vector<v2d_char> intermediateShapes{
   {{' ', '#'}, {'#', '#'}},
   {{'#', ' '}, {'#', '#'}},
   {{'#', '#'}, {'#', ' '}},
@@ -75,7 +75,7 @@ const vector<vector<vector<char>>> intermediateShapes{
   {{'#'}, {'#'}, {'#'}, {'#'}}
 };
 
-const vector<vector<vector<char>>> complexShapes{
+const vector<v2d_char> complexShapes{
   {{'#', '#', ' '}, {' ', '#', '#'}},
   {{' ', '#', '#'}, {'#', '#', ' '}},
   {{'#', ' '}, {'#', '#'}, {' ', '#'}},
@@ -92,7 +92,32 @@ const vector<vector<vector<char>>> complexShapes{
   {{' ', ' ', '#'}, {'#', '#', '#'}},
 };
 
-void printShape(vector<vector<vector<char>>> shape) {
+struct termios oldTerm, currentTerm;
+void initTermios(int echo) {
+  tcgetattr(0, &oldTerm);
+  currentTerm = oldTerm;
+  currentTerm.c_lflag &= ~ICANON;
+  if (echo) {
+      currentTerm.c_lflag |= ECHO;
+  } else {
+      currentTerm.c_lflag &= ~ECHO; 
+  }
+  tcsetattr(0, TCSANOW, &currentTerm);
+}
+
+void resetTermios(void) {
+  tcsetattr(0, TCSANOW, &oldTerm);
+}
+
+char _getch(int echo = 0) {
+  char c;
+  initTermios(echo);
+  c = getchar();
+  resetTermios();
+  return c;
+}
+
+void printShape(vector<v2d_char> shape) {
     for (int i = 0; i < shape.size(); ++i) {
         for (int j = 0; j < shape[i].size(); ++j) {
             for (int k = 0; k < shape[i][j].size(); k++) {
@@ -110,7 +135,7 @@ void printShape(vector<vector<vector<char>>> shape) {
 
 }
 
-void print(vector<vector<char>> text) {
+void print(v2d_char text) {
     for (size_t i = 0; i < text.size(); ++i) {
         for (size_t j = 0; j < text[i].size(); ++j) {
             cout << text[i][j];
@@ -119,19 +144,19 @@ void print(vector<vector<char>> text) {
     }
 }
 
-void addText(vector<vector<char>>& input, string text, int x, int y) {
+void addText(v2d_char& input, string text, int x, int y) {
     for (size_t i = 0; i < text.size(); i++) {
         input[x][y + i] = text[i];
     }
 }
 
-void addText(vector<vector<char>>& input, char c, int x, int y) {
+void addText(v2d_char& input, char c, int x, int y) {
     input[x][y] = c;
 }
 
-void printHeaderText(vector<vector<char>> nextBlockVector) {
+void printHeaderText(v2d_char nextBlockVector) {
     size_t height(5), width(WIDTH);
-    vector<vector<char>> output(height, vector<char>(width, ' '));
+    v2d_char output(height, vector<char>(width, ' '));
     string nextBlockText = "Next block: ";
 
     vector<string> nextBlock;
@@ -144,9 +169,9 @@ void printHeaderText(vector<vector<char>> nextBlockVector) {
     print(output);
 }
 
-void printMainFrame(vector<vector<char>> body, int highestScore, int score) {
+void printMainFrame(v2d_char body, int highestScore, int score) {
     size_t height(GAME_HEIGHT), width(GAME_WIDTH * 2 + WIDTH);
-    vector<vector<char>> output(height, vector<char>(width, ' '));
+    v2d_char output(height, vector<char>(width, ' '));
 
     for (int i = 0; i < body.size(); ++i) {
         for (int j = 0; j < body[i].size(); ++j) {
@@ -174,8 +199,8 @@ void printMainFrame(vector<vector<char>> body, int highestScore, int score) {
 }
 
 
-vector<vector<char>> initBoard(int width, int height) {
-    vector<vector<char>> board;
+v2d_char initBoard(int width, int height) {
+    v2d_char board;
     for (int i = 0; i < height; ++i) {
         vector<char> tmp;
         for (int j = 0; j < width; ++j) {
@@ -191,7 +216,7 @@ int randomInteger(int min, int max) {
     return min + std::rand() % (max - min);
 }
 
-vector<vector<char>> pickBlock(int simpleBlockProb, int intermBlockProb, int complexBlockProb) {
+v2d_char pickBlock(int simpleBlockProb, int intermBlockProb, int complexBlockProb) {
     int randomValue = randomInteger(0, simpleBlockProb + intermBlockProb + complexBlockProb);
     int current = 0;
     current += simpleBlockProb;
@@ -201,7 +226,7 @@ vector<vector<char>> pickBlock(int simpleBlockProb, int intermBlockProb, int com
     else return complexShapes[randomInteger(0, complexShapes.size() - 1)];
 }
 
-bool blockFits(vector<vector<char>> board, Block block) {
+bool blockFits(v2d_char board, Block block) {
     bool fits = true;
     for (int i = 0; i < block.text.size(); ++i) {
         for (int j = 0; j < block.text[i].size(); ++j) {
@@ -213,7 +238,7 @@ bool blockFits(vector<vector<char>> board, Block block) {
     return fits;
 }
 
-Block newBlock(vector<vector<char>> board) {
+Block newBlock(v2d_char board) {
     Block block;
     block.text = pickBlock(SIMPLE_SHAPE_PROB, INTERMEDIATE_SHAPE_PROB, COMPLEX_SHAPE_PROB);
     block.x = 0;
@@ -221,7 +246,7 @@ Block newBlock(vector<vector<char>> board) {
     return block;
 }
 
-vector<int> findFreeSpace(vector<vector<char>> board, Block block) {
+vector<int> findFreeSpace(v2d_char board, Block block) {
     vector<int> res(2, -1);
     for (int i = 0; i < board.size(); ++i) {
         for (int j = 0; j < board[0].size(); ++j) {
@@ -246,7 +271,7 @@ vector<int> findFreeSpace(vector<vector<char>> board, Block block) {
     return res;
 }
 
-void addBlock(vector<vector<char>>& board, Block block) {
+void addBlock(v2d_char& board, Block block) {
     for (int i = 0; i < block.text.size(); ++i) {
         for (int j = 0; j < block.text[i].size(); ++j) {
             if (block.text[i][j] == '#')
@@ -256,7 +281,7 @@ void addBlock(vector<vector<char>>& board, Block block) {
 
 }
 
-void applyOverlap(vector<vector<char>>& board, Block block) {
+void applyOverlap(v2d_char& board, Block block) {
     for (int i = 0; i < block.text.size(); ++i) {
         for (int j = 0; j < block.text[i].size(); ++j) {
             char c = board[block.x + i][block.y + j];
@@ -269,7 +294,7 @@ void applyOverlap(vector<vector<char>>& board, Block block) {
     }
 }
 
-void checkScoreCondition(vector<vector<char>>& board) {
+void checkScoreCondition(v2d_char& board) {
     for (int i = 0; i < board.size(); ++i) {
         bool rowIsComplete = true;
         for (int j = 0; j < board[i].size(); ++j) {
@@ -290,7 +315,7 @@ void checkScoreCondition(vector<vector<char>>& board) {
     }
 }
 
-void setBlockOnBoard(vector<vector<char>>& board, Block block) {
+void setBlockOnBoard(v2d_char& board, Block block) {
     for (int i = 0; i < block.text.size(); ++i) {
         for (int j = 0; j < block.text[i].size(); ++j)
         {
@@ -300,7 +325,7 @@ void setBlockOnBoard(vector<vector<char>>& board, Block block) {
     }
 }
 
-void updateBoard(vector<vector<char>>& board, Block block) {
+void updateBoard(v2d_char& board, Block block) {
     for (int i = 0; i < block.text.size(); ++i) {
         for (int j = 0; j < block.text[i].size(); ++j) {
             if (block.text[i][j] == '#')
@@ -311,7 +336,7 @@ void updateBoard(vector<vector<char>>& board, Block block) {
     }
 }
 
-void removeBlock(vector<vector<char>>& board, Block block) {
+void removeBlock(v2d_char& board, Block block) {
     for (int i = 0; i < block.text.size(); i++) {
         for (int j = 0; j < block.text[i].size(); j++)
         {
@@ -321,7 +346,7 @@ void removeBlock(vector<vector<char>>& board, Block block) {
     }
 }
 
-bool blockMovableToRight(vector<vector<char>> board, Block block) {
+bool blockMovableToRight(v2d_char board, Block block) {
     if (block.y + block.text[0].size() > board[0].size() - 1) return false;
     for (int i = 0; i < block.text.size(); i++) {
         if (block.text[i][block.text[i].size() - 1] == '#' &&
@@ -337,14 +362,14 @@ bool blockMovableToRight(vector<vector<char>> board, Block block) {
     return true;
 }
 
-void moveBlockRight(vector<vector<char>>& board, Block& block) {
+void moveBlockRight(v2d_char& board, Block& block) {
     if (!blockMovableToRight(board, block)) return;
     removeBlock(board, block);
     block.y++;
     updateBoard(board, block);
 }
 
-bool blockMovableToLeft(vector<vector<char>> board, Block block) {
+bool blockMovableToLeft(v2d_char board, Block block) {
     if (block.y <= 0) return false;
     for (int i = 0; i < block.text.size(); i++) {
         if (block.text[i][0] == '#' &&
@@ -360,14 +385,14 @@ bool blockMovableToLeft(vector<vector<char>> board, Block block) {
     return true;
 }
 
-void moveBlockLeft(vector<vector<char>>& board, Block& block) {
+void moveBlockLeft(v2d_char& board, Block& block) {
     if (!blockMovableToLeft(board, block)) return;
     removeBlock(board, block);
     block.y--;
     updateBoard(board, block);
 }
 
-bool blockMovableToDown(vector<vector<char>> board, Block block) {
+bool blockMovableToDown(v2d_char board, Block block) {
     if (block.x + block.text.size() > board.size() - 1) return false;
     for (int i = 0; i < block.text[0].size(); i++) {
         if (block.text[block.text.size() - 1][i] == '#' &&
@@ -383,14 +408,14 @@ bool blockMovableToDown(vector<vector<char>> board, Block block) {
     return true;
 }
     
-void moveBlockDown(vector<vector<char>>& board, Block& block) {
+void moveBlockDown(v2d_char& board, Block& block) {
     if (!blockMovableToDown(board, block)) return;
     removeBlock(board, block);
     block.x++;
     updateBoard(board, block);
 }
 
-bool blockMovableToUp(vector<vector<char>>& board, Block& block) {
+bool blockMovableToUp(v2d_char& board, Block& block) {
     if (block.x <= 0) return false;
     for (int i = 0; i < block.text[block.text.size() - 1].size(); i++) {
         if (block.text[block.text.size() - 1][i] == '#' &&
@@ -407,7 +432,7 @@ bool blockMovableToUp(vector<vector<char>>& board, Block& block) {
     return true;
 }
 
-void moveBlockUp(vector<vector<char>>& board, Block& block) {
+void moveBlockUp(v2d_char& board, Block& block) {
     if (!blockMovableToUp(board, block)) return;
     removeBlock(board, block);
     block.x--;
@@ -415,7 +440,7 @@ void moveBlockUp(vector<vector<char>>& board, Block& block) {
 }
 
 void hintScreen() {
-    system("cls");
+    system("clear");
     cout << "\n\t";
     cout << " < Block Puzzle >\n";
     cout << "\tGame shortcuts:\n\n";
@@ -428,8 +453,9 @@ void hintScreen() {
 }
 
 void gameScreen() {
-    vector<vector<char>> board = initBoard(GAME_WIDTH, GAME_HEIGHT);
+    v2d_char board = initBoard(GAME_WIDTH, GAME_HEIGHT);
     Block block = newBlock(board), nextBlock = newBlock(board);
+    bool firstRun = true;
     renderGameScreen(board, nextBlock);
     for (;;) {
             renderGameScreen(board, nextBlock);
@@ -448,8 +474,9 @@ void gameScreen() {
                 SCORE = 0;
                 gameScreen();
             }
-
-            if (input == '\r') {
+            if (input == '\n') {
+	      if(firstRun) firstRun = false;
+	      else {
                 setBlockOnBoard(board, block);
                 checkScoreCondition(board);
                 block = nextBlock;
@@ -466,13 +493,7 @@ void gameScreen() {
                     block.x = freeSpace[0];
                     block.y = freeSpace[1];
                 }
-                for (int i = 0; i < block.text.size(); ++i)
-                {
-                    for (int j = 0; j < block.text[i].size(); ++j) {
-                        cout << block.text[i][j] << " ";
-                    }
-                    cout << endl;
-                }
+	      }
             }
 
             if (blockFits(board, block)) {
@@ -485,14 +506,14 @@ void gameScreen() {
     }
 }
 
-void renderGameScreen(vector<vector<char>> board, Block nextBlock) {
-    system("cls");
-    printHeaderText(nextBlock.text);
-    printMainFrame(board, HIGHEST_SCORE, SCORE);
+void renderGameScreen(v2d_char board, Block nextBlock) {
+  system("clear");
+  printHeaderText(nextBlock.text);
+  printMainFrame(board, HIGHEST_SCORE, SCORE);
 }
 
 int startingScreen() {
-    system("cls");
+    system("clear");
     int choice;
     string padding = "\t\t";
     cout << "\n\n";
@@ -509,7 +530,7 @@ int startingScreen() {
 }
 
 void customDifficultyScreen(bool error = false) {
-    system("cls");
+    system("clear");
     cout << "\n\n";
     cout << "\tEnter game Width and Height and the probability of simple, intermediate and complex shapes: \n";
     cout << "\tExample: 11 11 10 10 10\n\n";
@@ -528,7 +549,7 @@ void customDifficultyScreen(bool error = false) {
 }
 
 int selectDifficultyScreen() {
-    system("cls");
+    system("clear");
     int choice;
     string padding = "\t\t";
     cout << "\n\n";
