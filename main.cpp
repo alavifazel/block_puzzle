@@ -100,7 +100,7 @@ void initTermios(int echo) {
   if (echo) {
       currentTerm.c_lflag |= ECHO;
   } else {
-      currentTerm.c_lflag &= ~ECHO; 
+      currentTerm.c_lflag &= ~ECHO;
   }
   tcsetattr(0, TCSANOW, &currentTerm);
 }
@@ -120,7 +120,7 @@ char _getch(int echo = 0) {
 void printShape(vector<v2d_char> shape) {
     for (int i = 0; i < shape.size(); ++i) {
         for (int j = 0; j < shape[i].size(); ++j) {
-            for (int k = 0; k < shape[i][j].size(); k++) {
+            for (int k = 0; k < shape[i][j].size(); ++k) {
                 if (shape[i][j][k] != 0) {
                     cout << shape[i][j][k];
                 }
@@ -145,7 +145,7 @@ void print(v2d_char text) {
 }
 
 void addText(v2d_char& input, string text, int x, int y) {
-    for (size_t i = 0; i < text.size(); i++) {
+    for (size_t i = 0; i < text.size(); ++i) {
         input[x][y + i] = text[i];
     }
 }
@@ -337,8 +337,8 @@ void updateBoard(v2d_char& board, Block block) {
 }
 
 void removeBlock(v2d_char& board, Block block) {
-    for (int i = 0; i < block.text.size(); i++) {
-        for (int j = 0; j < block.text[i].size(); j++)
+    for (int i = 0; i < block.text.size(); ++i) {
+        for (int j = 0; j < block.text[i].size(); ++j)
         {
             if (block.text[i][j] == '#')
                 board[block.x + i][block.y + j] = '-';
@@ -348,11 +348,11 @@ void removeBlock(v2d_char& board, Block block) {
 
 bool blockMovableToRight(v2d_char board, Block block) {
     if (block.y + block.text[0].size() > board[0].size() - 1) return false;
-    for (int i = 0; i < block.text.size(); i++) {
+    for (int i = 0; i < block.text.size(); ++i) {
         if (block.text[i][block.text[i].size() - 1] == '#' &&
-            board[block.x + i][block.y + block.text[i].size()] == '#') return false; 
+            board[block.x + i][block.y + block.text[i].size()] == '#') return false;
     }
-    for (int i = 0; i < block.text.size(); i++) {
+    for (int i = 0; i < block.text.size(); ++i) {
         int j = block.text[i].size() - 1;
         while (block.text[i][j] != '#' && j > 0) {
             if (board[block.x + i][block.y + j] == '#' && block.text[i][j] != '#') return false;
@@ -371,15 +371,15 @@ void moveBlockRight(v2d_char& board, Block& block) {
 
 bool blockMovableToLeft(v2d_char board, Block block) {
     if (block.y <= 0) return false;
-    for (int i = 0; i < block.text.size(); i++) {
+    for (int i = 0; i < block.text.size(); ++i) {
         if (block.text[i][0] == '#' &&
             board[block.x + i][block.y - 1] == '#') return false;
     }
-    for (int i = 0; i < block.text.size(); i++) {
+    for (int i = 0; i < block.text.size(); ++i) {
         int j = 0;
         while (block.text[i][j] != '#' && j < block.text[i].size()) {
             if (board[block.x + i][block.y + j] == '#' && block.text[i][j] != '#') return false;
-            j++;
+            ++j;
         }
     }
     return true;
@@ -394,11 +394,11 @@ void moveBlockLeft(v2d_char& board, Block& block) {
 
 bool blockMovableToDown(v2d_char board, Block block) {
     if (block.x + block.text.size() > board.size() - 1) return false;
-    for (int i = 0; i < block.text[0].size(); i++) {
+    for (int i = 0; i < block.text[0].size(); ++i) {
         if (block.text[block.text.size() - 1][i] == '#' &&
             board[block.x + block.text.size()][block.y + i] == '#') return false;
     }
-    for (int i = 0; i < block.text[0].size(); i++) {
+    for (int i = 0; i < block.text[0].size(); ++i) {
         int j = block.text.size() - 1;
         while (block.text[j][i] != '#' && j > 0) {
             if (board[block.x + j][block.y + i] == '#' && block.text[j][i] != '#') return false;
@@ -407,7 +407,7 @@ bool blockMovableToDown(v2d_char board, Block block) {
     }
     return true;
 }
-    
+
 void moveBlockDown(v2d_char& board, Block& block) {
     if (!blockMovableToDown(board, block)) return;
     removeBlock(board, block);
@@ -415,25 +415,25 @@ void moveBlockDown(v2d_char& board, Block& block) {
     updateBoard(board, block);
 }
 
-bool blockMovableToUp(v2d_char& board, Block& block) {
+bool blockMovableUp(v2d_char& board, Block& block) {
     if (block.x <= 0) return false;
-    for (int i = 0; i < block.text[block.text.size() - 1].size(); i++) {
-        if (block.text[block.text.size() - 1][i] == '#' &&
+    for (int i = 0; i < block.text[block.text.size() - 1].size(); ++i) {
+        if (block.text[0][i] == '#' &&
             board[block.x - 1][block.y + i] == '#') return false;
     }
 
-    for (int i = 0; i < block.text[0].size(); i++) {
+    for (int i = 0; i < block.text[0].size(); ++i) {
         int j = 0;
         while (block.text[j][i] != '#' && j < block.text.size()) {
-            if (board[block.x + j + 1][block.y + i + 1] == '#' && block.text[j][i] != '#') return false;
-            j++;
+            if (board[block.x + j][block.y + i] == '#' && block.text[j][i] != '#') return false;
+            ++j;
         }
     }
     return true;
 }
 
 void moveBlockUp(v2d_char& board, Block& block) {
-    if (!blockMovableToUp(board, block)) return;
+    if (!blockMovableUp(board, block)) return;
     removeBlock(board, block);
     block.x--;
     updateBoard(board, block);
@@ -458,51 +458,54 @@ void gameScreen() {
     bool firstRun = true;
     renderGameScreen(board, nextBlock);
     for (;;) {
-            renderGameScreen(board, nextBlock);
+        renderGameScreen(board, nextBlock);
 
-            char input = _getch();
-
-            if (input == '3') {
-                SCORE = 0;
-                return;
-            }
-            if (input == '2') {
-                hintScreen();
-            }
-            if (input == '1') {
-                HIGHEST_SCORE = SCORE;
-                SCORE = 0;
-                gameScreen();
-            }
+        char input = _getch();
+        switch(input) {
+          case '1':
+            HIGHEST_SCORE = SCORE;
+            SCORE = 0;
+            gameScreen();
+            break;
+          case '2':
+            hintScreen();
+            break;
+          case '3':
+            SCORE = 0;
+            return;
+            break;
+          case '\n':
             if (input == '\n') {
-	      if(firstRun) firstRun = false;
-	      else {
-                setBlockOnBoard(board, block);
-                checkScoreCondition(board);
-                block = nextBlock;
-                nextBlock = newBlock(board);
-                vector<int> freeSpace = findFreeSpace(board, block);    
-                if (freeSpace[0] == -1 || freeSpace[1] == -1) {
-                    cout << "\n\t\t*Game over!*\t\t\n";
-                    HIGHEST_SCORE = SCORE;
-                    SCORE = 0;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-                    gameScreen();
-                }
-                else {
-                    block.x = freeSpace[0];
-                    block.y = freeSpace[1];
-                }
-	      }
+      	      if(firstRun) firstRun = false;
+      	      else {
+                  setBlockOnBoard(board, block);
+                  checkScoreCondition(board);
+                  block = nextBlock;
+                  nextBlock = newBlock(board);
+                  vector<int> freeSpace = findFreeSpace(board, block);
+                  if (freeSpace[0] == -1 || freeSpace[1] == -1) {
+                      cout << "\n\t\t*Game over!*\t\t\n";
+                      HIGHEST_SCORE = SCORE;
+                      SCORE = 0;
+                      std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+                      gameScreen();
+                  }
+                  else {
+                      block.x = freeSpace[0];
+                      block.y = freeSpace[1];
+                  }
+      	       }
             }
+            break;
+        }
 
-            if (blockFits(board, block)) {
-                if (input == 'd' || input == 'D') moveBlockRight(board, block);
-                if (input == 'a' || input == 'A') moveBlockLeft(board, block);
-                if (input == 's' || input == 'S') moveBlockDown(board, block);
-                if (input == 'w' || input == 'W') moveBlockUp(board, block);
-            }
-            addBlock(board, block);
+        if (blockFits(board, block)) {
+            if (input == 'd' || input == 'D') moveBlockRight(board, block);
+            if (input == 'a' || input == 'A') moveBlockLeft(board, block);
+            if (input == 's' || input == 'S') moveBlockDown(board, block);
+            if (input == 'w' || input == 'W') moveBlockUp(board, block);
+        }
+        addBlock(board, block);
     }
 }
 
@@ -569,7 +572,7 @@ int selectDifficultyScreen() {
 
 void loop() {
     int choice = startingScreen();
-    switch (choice) {
+    switch(choice) {
     case 1:
         gameScreen();
         break;
