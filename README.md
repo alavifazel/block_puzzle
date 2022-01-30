@@ -1,5 +1,5 @@
 # Block puzzle game
-This tiny puzzle-game is basically a 2-D version of [Blockout](https://en.wikipedia.org/wiki/Blockout) written in C++.
+This small puzzle game is similar to the 2-D version of [Blockout](https://en.wikipedia.org/wiki/Blockout) written in C++.
 
 Screenshot:
 
